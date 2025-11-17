@@ -8,25 +8,25 @@ import * as Order from './order.js';
 export function renderMenu(menuData) {
   const grid = document.getElementById('menuGrid');
   if (!grid) return;
-  
+
   grid.innerHTML = '';
-  
+
   menuData.forEach(item => {
     const div = document.createElement('div');
     div.className = 'menu-item';
     div.innerHTML = `
-      <img src="${item.gambar}" alt="${item.nama}" style="max-width:100%; height:120px; object-fit:cover; border-radius:10px;">
-      <h4>${item.nama}</h4>
-      <p>Rp${item.harga.toLocaleString()}</p>
+      <img src="${item.gambar}" alt="${escapeHtml(item.nama)}" style="max-width:100%; height:120px; object-fit:cover; border-radius:10px;">
+      <h4>${escapeHtml(item.nama)}</h4>
+      <p>Rp${Number(item.harga).toLocaleString()}</p>
     `;
-    
-    // PENTING: Tambahkan onclick untuk add item ke cart
+
+    // klik menu menambah item (menyertakan object lengkap via window.addMenuToCart)
     div.onclick = () => {
       if (window.addMenuToCart) {
         window.addMenuToCart(item);
       }
     };
-    
+
     grid.appendChild(div);
   });
 }
@@ -37,28 +37,81 @@ export function renderMenu(menuData) {
 export function renderOrder() {
   const orderList = document.getElementById('orderList');
   const totalDisplay = document.getElementById('total');
-  
+
   if (!orderList || !totalDisplay) return;
-  
+
   const items = Order.getItems();
   const total = Order.getTotal();
-  
+
   orderList.innerHTML = '';
-  
+
   if (items.length === 0) {
-    orderList.innerHTML = '<li style="text-align:center; color:#999;">Belum ada pesanan</li>';
-  } else {
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span>${item.nama} x${item.jumlah}</span>
-        <span style="font-weight:700;">Rp${(item.harga * item.jumlah).toLocaleString()}</span>
-      `;
-      orderList.appendChild(li);
-    });
+    orderList.innerHTML = `
+      <li class="text-center text-muted py-2">Belum ada pesanan</li>
+    `;
+    totalDisplay.textContent = "0";
+    return;
   }
-  
+
+  items.forEach(item => {
+    const li = document.createElement('li');
+
+    li.className = "d-flex justify-content-between align-items-center py-2 border-bottom";
+
+    li.innerHTML = `
+      <div>
+        <strong>${escapeHtml(item.nama)}</strong>
+        <div class="text-muted small">x${item.jumlah}</div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+
+        <!-- gunakan data-nama karena pasti ada -->
+        <button class="btn btn-sm btn-outline-danger btnKurang" data-nama="${escapeHtml(item.nama)}" aria-label="Kurangi ${escapeHtml(item.nama)}">
+          <i class="bi bi-dash-lg" aria-hidden="true"></i>
+        </button>
+
+        <span class="fw-bold">Rp${(item.harga * item.jumlah).toLocaleString()}</span>
+
+        <button class="btn btn-sm btn-outline-success btnTambah" data-nama="${escapeHtml(item.nama)}" aria-label="Tambah ${escapeHtml(item.nama)}">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        </button>
+        
+      </div>
+    `;
+
+    orderList.appendChild(li);
+  });
+
   totalDisplay.textContent = total.toLocaleString();
+
+  // Event untuk tombol tambah — panggil window.increaseItem supaya menggunakan menu lookup di app.js
+  document.querySelectorAll(".btnTambah").forEach(btn => {
+    btn.onclick = () => {
+      const nama = btn.dataset.nama;
+      if (nama && window.increaseItem) {
+        window.increaseItem(nama);
+      } else {
+        // fallback: kalau window.increaseItem tidak ada, coba Order.addItem dengan lookup nama
+        Order.addItem({ nama }); // ini minimal, pastikan harga/id tetap ada di order.js kalau dipakai
+        renderOrder();
+      }
+    };
+  });
+
+  // Event untuk tombol kurang — panggil window.decreaseItem
+  document.querySelectorAll(".btnKurang").forEach(btn => {
+    btn.onclick = () => {
+      const nama = btn.dataset.nama;
+      if (nama && window.decreaseItem) {
+        window.decreaseItem(nama);
+      } else {
+        // fallback langsung ke module
+        Order.decreaseItem(nama);
+        renderOrder();
+      }
+    };
+  });
 }
 
 /**
@@ -71,28 +124,22 @@ export function showQrisModal(total, pembayaranData) {
   if (qrisTotal) {
     qrisTotal.textContent = total.toLocaleString();
   }
-  
-  // Show modal using Bootstrap
+
   const modalEl = document.getElementById('qrisModal');
   if (modalEl) {
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
-    
-    // Handle "Bayar Sekarang" button
+
     const btnBayar = document.getElementById('btnBayarSekarang');
     if (btnBayar) {
       btnBayar.onclick = () => {
-        // Close modal
         modal.hide();
-        
-        // Show struk after payment
+
         showStruk(pembayaranData);
-        
-        // Clear order
+
         Order.clearOrder();
         renderOrder();
-        
-        // Play success sound
+
         const successSound = document.getElementById('successSound');
         if (successSound) {
           successSound.play().catch(() => {});
@@ -114,10 +161,10 @@ export function showStruk(data) {
     hour: '2-digit',
     minute: '2-digit'
   });
-  
-  const itemsHTML = data.items.map(it => `
+
+  const itemsHTML = (data.items || []).map(it => `
     <div class="struk-item">
-      <span>${it.nama} x${it.jumlah}</span>
+      <span>${escapeHtml(it.nama)} x${it.jumlah}</span>
       <span>Rp${it.subtotal.toLocaleString()}</span>
     </div>
   `).join('');
@@ -128,24 +175,24 @@ export function showStruk(data) {
     <p><strong>Metode Pembayaran:</strong> <span>${escapeHtml(data.metode)}</span></p>
     <p><strong>Pengantaran:</strong> <span>${escapeHtml(data.opsiAntar)}</span></p>
     ${data.opsiAntar === 'Antar ke Rumah' ? `<p><strong>Alamat:</strong> <span>${escapeHtml(data.alamat)}</span></p>` : ''}
-    
+
     <hr>
-    
+
     <div class="struk-items">
       <p><strong>Detail Pesanan:</strong></p>
       ${itemsHTML}
     </div>
-    
+
     <hr>
-    
+
     <p style="font-size:1.2em;"><strong>Total Pesanan:</strong> <span style="color:#f5576c;">Rp ${data.total.toLocaleString()}</span></p>
-    
+
     ${data.metode === 'Tunai' ? `
       <p><strong>Uang Dibayar:</strong> <span>Rp ${data.uang.toLocaleString()}</span></p>
       <p><strong>Kembalian:</strong> <span style="color:#4caf50; font-weight:700;">Rp ${data.kembalian.toLocaleString()}</span></p>
     ` : `
       <p style="background:#e3f2fd; padding:10px; border-radius:8px; text-align:center; margin-top:10px;">
-        <strong>✅ Pembayaran berhasil melalui ${data.metode}</strong><br>
+        <strong>✅ Pembayaran berhasil melalui ${escapeHtml(data.metode)}</strong><br>
         <small style="color:#666;">Total: Rp ${data.total.toLocaleString()}</small>
       </p>
     `}
@@ -155,7 +202,7 @@ export function showStruk(data) {
   if (strukDetail) {
     strukDetail.innerHTML = strukHTML;
   }
-  
+
   const popup = document.getElementById('popupStruk');
   if (popup) {
     popup.style.display = 'flex';
@@ -165,8 +212,6 @@ export function showStruk(data) {
 
 /**
  * Filter menu by category
- * @param {String} kategori - Category name
- * @param {Array} allMenu - All menu items
  */
 export function filterMenuByCategory(kategori, allMenu) {
   if (kategori === 'all') {
@@ -179,8 +224,6 @@ export function filterMenuByCategory(kategori, allMenu) {
 
 /**
  * Escape HTML to prevent XSS
- * @param {String} str - String to escape
- * @returns {String}
  */
 function escapeHtml(str) {
   if (!str && str !== 0) return '';
