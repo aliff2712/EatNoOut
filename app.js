@@ -335,4 +335,3 @@ function showFloatingNotification(message) {
   
   setTimeout(() => floating.remove(), 1000);
 }
-
