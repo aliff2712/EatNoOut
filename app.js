@@ -40,6 +40,40 @@ document.addEventListener('DOMContentLoaded', () => {
     showFloatingNotification(`✓ ${item.nama} ditambahkan`);
   };
 
+  // Fungsi untuk mengurangi item di order
+  window.decreaseItem = function(nama) {
+    Order.decreaseItem(nama);
+    renderOrder();
+    
+    // Play sound jika ada (opsional, bisa gunakan klikSound atau sound lain)
+    const klikSound = document.getElementById('klikSound');
+    if (klikSound) {
+      klikSound.play().catch(() => {});
+    }
+    
+    // Tampilkan notifikasi floating
+    showFloatingNotification(`✓ ${nama} dikurangi`);
+  };
+
+  // Fungsi untuk menambah item di order (menggunakan addItem yang sudah ada)
+  window.increaseItem = function(nama) {
+    // Cari item dari menu berdasarkan nama untuk mendapatkan data lengkap
+    const item = menu.find(m => m.nama === nama);
+    if (item) {
+      Order.addItem(item);
+      renderOrder();
+      
+      // Play sound jika ada
+      const klikSound = document.getElementById('klikSound');
+      if (klikSound) {
+        klikSound.play().catch(() => {});
+      }
+      
+      // Tampilkan notifikasi floating
+      showFloatingNotification(`✓ ${nama} ditambahkan`);
+    }
+  };
+
   // attach payment-card click handlers (by delegation)
   document.querySelectorAll('.payment-card').forEach(card => {
     card.addEventListener('click', () => {
