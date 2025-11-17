@@ -1,9 +1,9 @@
 // js/app.js
-import { renderMenu, filterMenuByCategory } from './ui.js'; // Tambahkan filterMenuByCategory ke import
-import { renderOrder, showQrisModal, showStruk } from './ui.js';
-import * as Order from './order.js';
-import * as Payment from './payment.js';
-import { menu } from './menu.js';
+import { renderMenu, filterMenuByCategory } from 'ui.js'; // Tambahkan filterMenuByCategory ke import
+import { renderOrder, showQrisModal, showStruk } from 'ui.js';
+import * as Order from 'order.js';
+import * as Payment from 'payment.js';
+import { menu } from 'menu.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // initial render
@@ -335,3 +335,4 @@ function showFloatingNotification(message) {
   
   setTimeout(() => floating.remove(), 1000);
 }
+
