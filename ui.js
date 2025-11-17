@@ -1,5 +1,5 @@
 // js/ui.js
-import * as Order from './order.js';
+import * as Order from 'order.js';
 
 /**
  * Render menu items to grid
@@ -234,3 +234,4 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
